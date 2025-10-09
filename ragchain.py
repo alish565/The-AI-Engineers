@@ -27,29 +27,36 @@ from langchain.prompts import PromptTemplate
 from urllib.request import urlretrieve
 from langchain.chains import RetrievalQA
 
+#i wrote the code in google colab, here iam setting the openai api key  inorder to use openai llm
 os.environ["OPENAI_API_KEY"] = userdata.get("OPENAI_API_KEY")
 
 url="https://institute.aljazeera.net/sites/default/files/2018/mobile%20journalisn%20english.pdf"
-
+#creating the directorty where the pdf is going to be stored after loading it from the url
 os.makedirs("mobile_journalism", exist_ok=True)
 
 file_path = os.path.join("mobile_journalism", url.rpartition("/")[2])
 urlretrieve(url, file_path)
 
+#loading the pdf
 loader = PyMuPDFLoader(file_path)
 docs = loader.load()
 
+#splitting the pdf into chuncks of 500 with 100 overlap
 splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
 chunked_docs = splitter.split_documents(docs)
 
-
+#for the embedding i sed openai
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+# used faiss f as the vectorestore, and stored the docs with the embedding
 faiss_index = FAISS.from_documents(chunked_docs, embeddings)
 
+#the llm used for the project is gpt-3.5 model
 llm = ChatOpenAI(model="gpt-3.5-turbo")
 
+#setting faiss index as retriever
 retriever = faiss_index.as_retriever()
 
+#creating the promt template guiding the model that he should response from the context provided
 prompt_template = """Use the following pieces of context to answer the question at the end. Please follow the following rules:
 1. If you don't know the answer, don't try to make up an answer. Just say "I can't find the final answer but you may want to check the following links".
 2. If you find the answer, write the answer in a concise way with five sentences maximum.
@@ -65,6 +72,7 @@ PROMPT = PromptTemplate(
  template=prompt_template, input_variables=["context", "question"]
 )
 
+#creating the RAG chain
 retrievalQA = RetrievalQA.from_chain_type(
     llm=llm,
     chain_type="stuff",

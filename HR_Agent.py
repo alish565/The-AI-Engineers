@@ -22,9 +22,10 @@ from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 client = OpenAI()
-
+#adding the wikipedia searching tool
 wikipedia_tool = WikipediaQueryRun(api_wrapper=WikipediaAPIWrapper())
 
+#defining the function that returns the data of the employees
 @tool
 def get_employee_details(employee_id: str) -> dict:
     """Simulated function to get employee details."""
@@ -47,6 +48,7 @@ def get_employee_details(employee_id: str) -> dict:
     }
     return employee_db.get(employee_id, {"error": "Employee not found"})
 
+#defining the function that returns the eave days of the eamployee
 @tool
 def check_leave_balance(employee_id: str) -> dict:
     """Simulated function to check leave balance for an employee."""
@@ -75,6 +77,7 @@ def check_leave_balance(employee_id: str) -> dict:
 
 
 
+#setting the tools and prompt for the agent
 tools=[get_employee_details, check_leave_balance,wikipedia_tool]
 
 prompt = ChatPromptTemplate.from_messages(
@@ -86,24 +89,24 @@ prompt = ChatPromptTemplate.from_messages(
         ("placeholder" , "{agent_scratchpad}")
     ]
 )
-
+#setting up the llm that will power the agent
 llm = ChatOpenAI(model="gpt-4-turbo", api_key=api_key)
-
+#setting up the memory for the agent
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
-
+#creating the agent
 agent = create_tool_calling_agent(llm, tools, prompt)
-
+#creating the agent executor
 agent_executor = AgentExecutor(
     agent = agent,
     tools = tools,
     memory = memory,
     verbose=True
 )
-
+#function to interact with the agent
 def HR_assistant(message, history):
     response = agent_executor.invoke({"input" :message})
     return response['output']
-
+#gradio interface to chat with the agent
 if __name__ == "__main__":
     import gradio as gr
     iface = gr.ChatInterface(
